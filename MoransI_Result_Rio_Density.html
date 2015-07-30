@@ -1,0 +1,129 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+"http://www.w3.org/TR/html4/strict.dtd">
+<html><head><style type="text/css">
+        html, body, div, span, applet, object, iframe,
+        h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+        a, abbr, acronym, address, big, cite, code,
+        del, dfn, em, font, img, ins, kbd, q, s, samp,
+        small, strike, strong, sub, sup, tt, var,
+        b, u, i, center,
+        dl, dt, dd, ol, ul, li,
+        fieldset, form, label, legend,
+        table, caption, tbody, tfoot, thead, tr, th, td {
+            margin: 0;
+            padding: 0;
+            border: 0;
+            outline: 0;
+            font-size: 100%;
+            vertical-align: baseline;
+            background: transparent;
+        }
+        body {
+            line-height: 1.2em;
+        }
+        ol, ul {
+            list-style: none;
+        }
+        blockquote, q {
+            quotes: none;
+        }
+        blockquote:before, blockquote:after,
+        q:before, q:after {
+            content: '';
+            content: none;
+        }
+
+        :focus {
+            outline: 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            border-spacing: 0;
+        }
+
+
+
+        body {
+            font-family: tahoma, verdana, sans-serif;
+            background-color: #e5f0f5;
+            text-align: center;
+
+        }
+        h1 {
+            text-align: center;
+            color:#00709C;
+            font-size:1.2em;
+            margin: 12px;
+        }
+
+        caption {
+            text-align: center;
+            color:#00709C;
+            font-size:1em;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+        th {
+            text-align: left;
+            padding-right: 4px;
+        }
+
+        #mainImg {
+            border: 1px solid #c6c6c6;
+            padding: 20px 30px 10px 30px;
+            text-align: center;
+            background-color: #ffffff;
+            margin:0 auto 15px auto;
+            width: 540px;
+        }
+
+        #mainImg p {
+            text-align: left;
+            font-size:.8em;
+            border-top: 1px solid #c6c6c6;
+            padding: 10px 0 0 0;
+        }
+
+        #key {
+            float: center;
+            width: 540px;
+            margin:0 auto;
+            text-align: left;
+        }
+
+        #keytable {
+            float: left;
+            font-size:.75em;
+            position: absolute;
+            margin: 30px 0 0 0;
+        }
+
+        #keytable img {
+            margin-left: 4px;
+        }
+        .infotable {
+            border: 1px solid #c6c6c6;
+            background-color: #ffffff;
+            font-size:1.2em;
+            width: 600px;
+            margin: 0 auto 15px auto;
+        }
+        .infotable th, .infotable td  {
+            width: 50%;
+            font-size:.75em;
+            padding: 5px;
+            border-top: 1px solid #c6c6c6;
+        }
+
+        .infotable th{
+            border-right: 1px solid #c6c6c6;
+        }
+
+        th {
+            text-align: right;
+        }
+        td {
+            text-align: left;
+        }
+    </style><title>Spatial Autocorrelation Report</title></head><body><h1>Spatial Autocorrelation Report</h1><div id="key"><table id="keytable"><tr><th>Moran's Index: </th><td>0.145646</td><td /></tr><tr><th>z-score: </th><td>248.134806</td><td><img src="file://C:\Program Files (x86)\ArcGIS\Desktop10.2\ArcToolbox\Scripts\Images\clusteredBox01.png" /></td></tr><tr><th>p-value: </th><td>0.000000</td><td /></tr></table></div><div id="mainImg"><img alt="Spatial Autocorrelation Report" src="file://C:\Program Files (x86)\ArcGIS\Desktop10.2\ArcToolbox\Scripts\Images\clusteredValues01.png" /><p>Given the z-score of 248.13, there is a less than 1% likelihood that this clustered pattern could be the result of random chance.</p></div><table class="infotable"><caption>Global Moran's I Summary</caption><tr><th>Moran's Index: </th><td>0.145646</td></tr><tr><th>Expected Index: </th><td>-0.000051</td></tr><tr><th>Variance: </th><td>0.000000</td></tr><tr><th>z-score: </th><td>248.134806</td></tr><tr><th>p-value: </th><td>0.000000</td></tr></table><table class="infotable"><caption>Dataset Information</caption><tr><th>Input Feature Class: </th><td>Rio_RM</td></tr><tr><th>Input Field: </th><td>DENSITY</td></tr><tr><th>Conceptualization: </th><td>INVERSE_DISTANCE</td></tr><tr><th>Distance Method: </th><td>EUCLIDEAN</td></tr><tr><th>Row Standardization: </th><td>True</td></tr><tr><th>Distance Threshold: </th><td>0.0447 Degrees</td></tr><tr><th>Weights Matrix File: </th><td>None</td></tr><tr><th>Selection Set: </th><td>False</td></tr></table></body></html>
