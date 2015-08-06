@@ -93,6 +93,13 @@ class Morans(object):
         pd.options.display.float_format = '{:10.7f}'.format
         return pd.Series(results)
 
-    def pickle_results(self, column):
-        #TODO
-        pass
+    def write_pickle_weights(self, filename):
+        if not hasattr(self, 'weights'):
+            return
+        with open(filename, 'wb') as f:
+            pickle.dump( self.weights, f, protocol=pickle.HIGHEST_PROTOCOL)
+        return
+
+    def read_weights_pickle(self,filename):
+        with open(filename, 'rb') as f:
+            return pickle.load(f)
