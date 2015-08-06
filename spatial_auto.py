@@ -14,6 +14,7 @@ import pysal
 
 
 class Morans(object):
+
     """Morans
 
     Usage:
@@ -32,7 +33,8 @@ class Morans(object):
         self.results = {}
 
         # Calculate the faster properties on init
-        self._threshold = pysal.min_threshold_dist_from_shapefile(self.shapefile)
+        self._threshold = pysal.min_threshold_dist_from_shapefile(
+            self.shapefile)
         self._data = pysal.open(self.dbf)
         self._columns = self._data.by_col
 
@@ -60,22 +62,23 @@ class Morans(object):
     def calculate_weights(self, threshold=None, *args, **kwargs):
         if threshold is None:
             if hasattr(self, 'threshold'):
-                threshold=self.threshold
+                threshold = self.threshold
             else:
                 raise ValueError("Must set threshold first")
         self.weights = pysal.threshold_binaryW_from_shapefile(
             self.shapefile, threshold, *args, **kwargs)
         return self.weights
 
-    def calculate_morans(self, column, overwrite=False, *args, **kwargs):
-        if not overwrite and column in self.results:
-            return self.results[column]
+    def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
         if not hasattr(self, 'weights'):
             self.calculate_weights(threshold=self.threshold)
-        y = np.array(self.data.by_col(column))
-        mi = pysal.Moran(y, self.weights, *args, **kwargs)
-        self.results[column] = mi
-        return mi
+        for col in columns:
+            if not overwrite and col in self.results:
+                continue
+            y = np.array(self.data.by_col(col))
+            mi = pysal.Moran(y, self.weights, *args, **kwargs)
+            self.results[col] = mi
+        return self.results
 
     def print_results(self, column):
         """ Quick way to nicely print results with Pandas Series
@@ -84,15 +87,15 @@ class Morans(object):
         results = {
             'COLUMN': column,
             "Moran's Index": mi.I,
-            'Expected Index':mi.EI,
-            'Variance':mi.VI_norm,
-            'z-score':mi.z_norm,
-            'p-value':mi.p_norm,
-            'threshold' : self.threshold
+            'Expected Index': mi.EI,
+            'Variance': mi.VI_norm,
+            'z-score': mi.z_norm,
+            'p-value': mi.p_norm,
+            'threshold': self.threshold
         }
         pd.options.display.float_format = '{:10.7f}'.format
         return pd.Series(results)
 
     def pickle_results(self, column):
-        #TODO
+        # TODO
         pass
