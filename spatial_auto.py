@@ -6,11 +6,15 @@
     :copyright: (c) 2015 by Joe Hand, Santa Fe Institute.
     :license: MIT
 """
+import ntpath
+import os
 import pickle
 
 import numpy as np
 import pandas as pd
 import pysal
+
+from osgeo import ogr
 
 
 class Morans(object):
@@ -99,3 +103,81 @@ class Morans(object):
     def pickle_results(self, column):
         # TODO
         pass
+
+
+class ShapeFilter(object):
+
+    """ ShapeFilter
+
+    Filter single shapefile by a field,
+    creating new shapefiles for each value.
+
+    """
+
+    def __init__(self, shapefile, filter_field, out_dir='tmp'):
+        super(ShapeFilter, self).__init__()
+        self.shapefile = shapefile
+        self.field = filter_field
+
+        self.input_ds = ogr.Open('{}'.format(shapefile))
+        self.filename = self._get_filename()
+        self.out_dir = self._get_create_out_dir(out_dir)
+
+    def _get_create_out_dir(self, out_dir):
+        path = os.path.dirname(self.shapefile)
+        out_dir = os.path.join(path, out_dir)
+        if not os.path.exists(out_dir):
+            os.makedirs(out_dir)
+        return out_dir
+
+    def _get_filename(self):
+        return os.path.splitext(ntpath.basename(self.shapefile))[0]
+
+    def _create_filtered_shapefile(self, value):
+        input_layer = self.input_ds.GetLayer()
+        query_str = "'{}' = {}".format(self.field, value)
+        # Filter by our query
+        input_layer.SetAttributeFilter(query_str)
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        out_shapefile = "{}/{}.shp".format(self.out_dir, value)
+        # Remove output shapefile if it already exists
+        if os.path.exists(out_shapefile):
+            driver.DeleteDataSource(out_shapefile)
+        out_ds = driver.CreateDataSource(out_shapefile)
+        out_layer = out_ds.CopyLayer(input_layer, str(value))
+        del input_layer, out_layer, out_ds
+        return out_shapefile
+
+    def _get_unique_values(self):
+        sql = "SELECT DISTINCT '{}' FROM {}".format(
+            self.field, self.filename)
+        layer = self.input_ds.ExecuteSQL(sql)
+        values = []
+        for feature in layer:
+            values.append(feature.GetField(0))
+        return values
+
+    def create_all_shapefiles(self):
+        shapefiles = []
+        for val in self._get_unique_values():
+            out_file = self._create_filtered_shapefile(val)
+            shapefiles.append(out_file)
+        return shapefiles
+
+
+def run_moran_shapefilter(source_shapefile, filter_column, analysis_columns):
+    """
+    1. Filter Shapefile by filter_column
+    2. Run Moran's analysis for each shapefile, each analysis column
+    3. Return all results
+    """
+    results = {}
+    shapefilter = ShapeFilter(source_shapefile, filter_column)
+    filtered_files = shapefilter.create_all_shapefiles()
+    for file in filtered_files:
+        named_path = os.path.splitext(file)[0]
+        filename = os.path.splitext(os.path.basename(file))[0]
+        moran = Morans(named_path)
+        moran.calculate_morans(analysis_columns)
+        results[filename] = moran
+    return results
