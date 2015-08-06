@@ -164,6 +164,11 @@ class ShapeFilter(object):
             shapefiles.append(out_file)
         return shapefiles
 
+def run_single_morans(file):
+    named_path = os.path.splitext(file)[0]
+    moran = Morans(named_path)
+    moran.calculate_morans(analysis_columns)
+    return moran
 
 def run_moran_shapefilter(source_shapefile, filter_column, analysis_columns):
     """
@@ -175,9 +180,6 @@ def run_moran_shapefilter(source_shapefile, filter_column, analysis_columns):
     shapefilter = ShapeFilter(source_shapefile, filter_column)
     filtered_files = shapefilter.create_all_shapefiles()
     for file in filtered_files:
-        named_path = os.path.splitext(file)[0]
         filename = os.path.splitext(os.path.basename(file))[0]
-        moran = Morans(named_path)
-        moran.calculate_morans(analysis_columns)
-        results[filename] = moran
+        results[filename] = run_single_morans(file)
     return results

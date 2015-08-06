@@ -63,8 +63,13 @@ target/
 .LSOverride
 
 # Icon must end with two \r
+<<<<<<< HEAD
 Icon
 
+=======
+Icon
+
+>>>>>>> origin/master
 
 # Thumbnails
 ._*
