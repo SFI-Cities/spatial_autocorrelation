@@ -63,7 +63,8 @@ target/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon
+
 
 # Thumbnails
 ._*
@@ -84,3 +85,5 @@ Temporary Items
 
 # Temporary data
 .ipynb_checkpoints/
+tmp/
+*Untitled*
