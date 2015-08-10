@@ -16,6 +16,8 @@ import time
 
 from datetime import timedelta
 
+import pandas as pd
+
 from spatial_auto import run_moran_analysis
 
 parser = argparse.ArgumentParser(
@@ -48,12 +50,20 @@ if __name__ == '__main__':
     results = run_moran_analysis(
         args.shapefile, args.analysis_vars, filter_column=filter_col)
     logging.info('Finished Calculations \n\n')
+    results_df = []
+    keys = []
     for shapefile, values in results:
-        for var in args.analysis_vars:
-            results_log = 'RESULTS: {} - {}'.format(shapefile, var)
-            results_log += values[var]
-            results_log += '\n'
-            logging.info(results_log)
+        df = pd.DataFrame(values).transpose()
+        keys.append(shapefile)
+        results_df.append(df)
+
+        results_log = '{} RESULTS \n'.format(shapefile.upper())
+        results_log += df.to_string()
+        results_log += '\n'
+        logging.info(results_log)
+    results_df = pd.concat(results_df, keys=keys, axis=0)
+    results_df.to_csv('results.csv')
+    results_df.to_html('results.html')
     elapsed_time = time.process_time() - t
     logging.debug('Total elapsed time {}'.format(
-            str(timedelta(seconds=elapsed_time))))
+        str(timedelta(seconds=elapsed_time))))

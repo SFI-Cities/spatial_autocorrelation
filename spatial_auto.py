@@ -35,7 +35,7 @@ class Morans(object):
     from spatial_auto import Morans
     moran = Morans('shapefile_name') # Call with shapefile name, no extension
     moran.calculate_morans('column') # This can take a long time
-    moran.print_results('densitypop')
+    moran.get_results('densitypop')
     """
 
     def __init__(self, filename, name=None):
@@ -105,7 +105,7 @@ class Morans(object):
             self.results[col] = mi
         return self.results
 
-    def print_results(self, column):
+    def get_results(self, column, print_results=True):
         """ Quick way to nicely print results with Pandas Series
         """
         mi = self.results[column]
@@ -118,14 +118,16 @@ class Morans(object):
             ('p-value', mi.p_norm),
             ('threshold', self.threshold)
         ])
-        results_string = '\n'
-        for key, val in results.items():
-            if isinstance(val, float):
-                results_string += '\t {}: {:>10.7f}'.format(key, val)
-            else:
-                results_string += '\t {}: {}'.format(key, val)
-            results_string += '\n'
-        return results_string
+        if print_results:
+            results_string = '\n'
+            for key, val in results.items():
+                if isinstance(val, float):
+                    results_string += '\t {}: {:>10.7f}'.format(key, val)
+                else:
+                    results_string += '\t {}: {}'.format(key, val)
+                results_string += '\n'
+            return results_string
+        return results
 
     def pickle_results(self, column):
         # TODO
@@ -215,7 +217,7 @@ def run_single_morans(file, analysis_columns):
 
     results = {}
     for col in analysis_columns:
-        results[col] = moran.print_results(col)
+        results[col] = moran.get_results(col, print_results=False)
     return (filename, results)
 
 
