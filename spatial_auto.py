@@ -229,7 +229,6 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, m
     else:
         logging.info('No Shapefilter, Analyzing Source Shapefile')
         files = [source_shapefile]
-    files = files[:2]
     if mp:
         results =  _moran_mp(files, analysis_columns)
     else:
