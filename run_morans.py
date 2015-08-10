@@ -12,6 +12,9 @@
 """
 import argparse
 import logging
+import time
+
+from datetime import timedelta
 
 from spatial_auto import run_moran_analysis
 
@@ -29,6 +32,7 @@ parser.set_defaults(log=True)
 args = parser.parse_args()
 
 if __name__ == '__main__':
+    t = time.process_time()
     if args.log:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
@@ -44,9 +48,12 @@ if __name__ == '__main__':
     results = run_moran_analysis(
         args.shapefile, args.analysis_vars, filter_column=filter_col)
     logging.info('Finished Calculations \n\n')
-    for shapefile in results.keys():
+    for shapefile, values in results:
         for var in args.analysis_vars:
             results_log = 'RESULTS: {} - {}'.format(shapefile, var)
-            results_log += results[shapefile].print_results(var)
+            results_log += values[var]
             results_log += '\n'
             logging.info(results_log)
+    elapsed_time = time.process_time() - t
+    logging.debug('Total elapsed time {}'.format(
+            str(timedelta(seconds=elapsed_time))))
