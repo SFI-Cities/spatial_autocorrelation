@@ -38,11 +38,14 @@ class Morans(object):
     moran.print_results('densitypop')
     """
 
-    def __init__(self, filename):
+    def __init__(self, filename, name=None):
         super(Morans, self).__init__()
         self.filename = filename
         self.shapefile = filename + '.shp'
         self.dbf = filename + '.dbf'
+
+        if name:
+            self.name = name
 
         self.results = {}
 
@@ -79,16 +82,16 @@ class Morans(object):
                 threshold = self.threshold
             else:
                 raise ValueError("Must set threshold first")
-        logging.warning('Treshold = {}'.format(threshold))
-        logging.info('Starting weight calculation (slow)')
+        logging.warning('{}: Treshold = {}'.format(self.name, threshold))
+        logging.info('{}: Starting weight calculation'.format(self.name))
         t = time.process_time()
 
         self.weights = pysal.threshold_binaryW_from_shapefile(
             self.shapefile, threshold, *args, **kwargs)
 
         elapsed_time = time.process_time() - t
-        logging.debug('Weight calculation elapsed time {}'.format(
-            str(timedelta(seconds=elapsed_time))))
+        logging.debug('{}: Weight calculation elapsed time {}'.format(
+            self.name, str(timedelta(seconds=elapsed_time))))
         return self.weights
 
     def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
@@ -206,7 +209,8 @@ def run_single_morans(file, analysis_columns):
     named_path = os.path.splitext(file)[0]
     filename = os.path.splitext(os.path.basename(file))[0]
 
-    moran = Morans(named_path)
+    logging.info('{}: Starting Analysis'.format(filename.upper()))
+    moran = Morans(named_path, name=filename.upper())
     moran_results = moran.calculate_morans(analysis_columns)
 
     results = {}
@@ -235,7 +239,6 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, m
         results = []
         for file in files:
             filename = os.path.splitext(os.path.basename(file))[0]
-            logging.info('Starting Analysis of {}'.format(filename))
             results.append(run_single_morans(file, analysis_columns))
     return results
 
