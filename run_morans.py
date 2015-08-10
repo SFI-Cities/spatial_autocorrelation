@@ -46,7 +46,7 @@ if __name__ == '__main__':
     logging.info('Finished Calculations \n\n')
     for shapefile in results.keys():
         for var in args.analysis_vars:
-            results_log = 'Results: {} - {}'.format(shapefile, var)
+            results_log = 'RESULTS: {} - {}'.format(shapefile, var)
             results_log += results[shapefile].print_results(var)
             results_log += '\n'
             logging.info(results_log)

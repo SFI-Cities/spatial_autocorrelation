@@ -10,6 +10,11 @@ import logging
 import ntpath
 import os
 import pickle
+import time
+
+from datetime import timedelta
+
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -72,8 +77,14 @@ class Morans(object):
                 raise ValueError("Must set threshold first")
         logging.warning('Treshold = {}'.format(threshold))
         logging.info('Starting weight calculation (slow)')
+        t = time.process_time()
+
         self.weights = pysal.threshold_binaryW_from_shapefile(
             self.shapefile, threshold, *args, **kwargs)
+
+        elapsed_time = time.process_time() - t
+        logging.debug('Weight calculation elapsed time {}'.format(
+            str(timedelta(seconds=elapsed_time))))
         return self.weights
 
     def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
@@ -91,17 +102,23 @@ class Morans(object):
         """ Quick way to nicely print results with Pandas Series
         """
         mi = self.results[column]
-        results = {
-            'COLUMN': column,
-            "Moran's Index": mi.I,
-            'Expected Index': mi.EI,
-            'Variance': mi.VI_norm,
-            'z-score': mi.z_norm,
-            'p-value': mi.p_norm,
-            'threshold': self.threshold
-        }
-        pd.options.display.float_format = '{:10.7f}'.format
-        return pd.Series(results)
+        results = OrderedDict([
+            ('COLUMN', column),
+            ("Moran's Index", mi.I),
+            ('Expected Index', mi.EI),
+            ('Variance', mi.VI_norm),
+            ('z-score', mi.z_norm),
+            ('p-value', mi.p_norm),
+            ('threshold', self.threshold)
+        ])
+        results_string = '\n'
+        for key, val in results.items():
+            if isinstance(val, float):
+                results_string += '\t {}: {:>10.7f}'.format(key, val)
+            else:
+                results_string += '\t {}: {}'.format(key, val)
+            results_string += '\n'
+        return results_string
 
     def pickle_results(self, column):
         # TODO
@@ -186,10 +203,11 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None):
         logging.info('Running Shape Filter using: {}'.format(filter_column))
         shapefilter = ShapeFilter(source_shapefile, filter_column)
         files = shapefilter.create_all_shapefiles()
+        logging.info('Created {} new shapefiles: {}'.format(len(files), files))
     else:
         logging.info('No Shapefilter, Analyzing Source Shapefile')
         files = [source_shapefile]
-    for file in files:
+    for file in files[:2]:
         filename = os.path.splitext(os.path.basename(file))[0]
         logging.info('Starting Analysis of {}'.format(filename))
         results[filename] = run_single_morans(file, analysis_columns)
