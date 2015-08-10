@@ -6,6 +6,7 @@
     :copyright: (c) 2015 by Joe Hand, Santa Fe Institute.
     :license: MIT
 """
+import logging
 import ntpath
 import os
 import pickle
@@ -69,6 +70,8 @@ class Morans(object):
                 threshold = self.threshold
             else:
                 raise ValueError("Must set threshold first")
+        logging.warning('Treshold = {}'.format(threshold))
+        logging.info('Starting weight calculation (slow)')
         self.weights = pysal.threshold_binaryW_from_shapefile(
             self.shapefile, threshold, *args, **kwargs)
         return self.weights
@@ -164,22 +167,30 @@ class ShapeFilter(object):
             shapefiles.append(out_file)
         return shapefiles
 
+
 def run_single_morans(file, analysis_columns):
     named_path = os.path.splitext(file)[0]
     moran = Morans(named_path)
     moran.calculate_morans(analysis_columns)
     return moran
 
-def run_moran_shapefilter(source_shapefile, filter_column, analysis_columns):
+
+def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None):
     """
     1. Filter Shapefile by filter_column
     2. Run Moran's analysis for each shapefile, each analysis column
     3. Return all results
     """
     results = {}
-    shapefilter = ShapeFilter(source_shapefile, filter_column)
-    filtered_files = shapefilter.create_all_shapefiles()
-    for file in filtered_files:
+    if filter_column:
+        logging.info('Running Shape Filter using: {}'.format(filter_column))
+        shapefilter = ShapeFilter(source_shapefile, filter_column)
+        files = shapefilter.create_all_shapefiles()
+    else:
+        logging.info('No Shapefilter, Analyzing Source Shapefile')
+        files = [source_shapefile]
+    for file in files:
         filename = os.path.splitext(os.path.basename(file))[0]
+        logging.info('Starting Analysis of {}'.format(filename))
         results[filename] = run_single_morans(file, analysis_columns)
     return results
