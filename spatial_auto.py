@@ -10,9 +10,13 @@ import logging
 import ntpath
 import os
 import pickle
+import re
 import time
+import unicodedata
 
 from datetime import timedelta
+from functools import partial
+from multiprocessing import Pool
 
 from collections import OrderedDict
 
@@ -153,12 +157,25 @@ class ShapeFilter(object):
     def _get_filename(self):
         return os.path.splitext(ntpath.basename(self.shapefile))[0]
 
+    def _slugify(self, value):
+        """
+        From Django source.
+        Converts to lowercase, removes non-word characters (alphanumerics and
+        underscores) and converts spaces to hyphens. Also strips leading and
+        trailing whitespace.
+        """
+        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+        value = re.sub('[^\w\s-]', '', value).strip().lower()
+        return re.sub('[-\s]+', '-', value)
+
     def _create_filtered_shapefile(self, value):
         input_layer = self.input_ds.GetLayer()
-        query_str = "'{}' = {}".format(self.field, value)
+        query_str = "'{}' = '{}'".format(self.field, value)
         # Filter by our query
         input_layer.SetAttributeFilter(query_str)
         driver = ogr.GetDriverByName('ESRI Shapefile')
+        value = value.split('-')[0] # Hack for US Cities
+        value = self._slugify(value)
         out_shapefile = "{}/{}.shp".format(self.out_dir, value)
         # Remove output shapefile if it already exists
         if os.path.exists(out_shapefile):
@@ -187,18 +204,23 @@ class ShapeFilter(object):
 
 def run_single_morans(file, analysis_columns):
     named_path = os.path.splitext(file)[0]
+    filename = os.path.splitext(os.path.basename(file))[0]
+
     moran = Morans(named_path)
-    moran.calculate_morans(analysis_columns)
-    return moran
+    moran_results = moran.calculate_morans(analysis_columns)
+
+    results = {}
+    for col in analysis_columns:
+        results[col] = moran.print_results(col)
+    return (filename, results)
 
 
-def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None):
+def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, mp=True):
     """
     1. Filter Shapefile by filter_column
     2. Run Moran's analysis for each shapefile, each analysis column
     3. Return all results
     """
-    results = {}
     if filter_column:
         logging.info('Running Shape Filter using: {}'.format(filter_column))
         shapefilter = ShapeFilter(source_shapefile, filter_column)
@@ -207,8 +229,21 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None):
     else:
         logging.info('No Shapefilter, Analyzing Source Shapefile')
         files = [source_shapefile]
-    for file in files[:2]:
-        filename = os.path.splitext(os.path.basename(file))[0]
-        logging.info('Starting Analysis of {}'.format(filename))
-        results[filename] = run_single_morans(file, analysis_columns)
+    files = files[:2]
+    if mp:
+        results =  _moran_mp(files, analysis_columns)
+    else:
+        results = []
+        for file in files:
+            filename = os.path.splitext(os.path.basename(file))[0]
+            logging.info('Starting Analysis of {}'.format(filename))
+            results.append(run_single_morans(file, analysis_columns))
     return results
+
+
+def _moran_mp(files, cols):
+    with Pool(processes=8) as pool:
+        result = pool.map_async(
+            partial(run_single_morans, analysis_columns=cols), files,)
+        result.wait()
+    return result.get()
