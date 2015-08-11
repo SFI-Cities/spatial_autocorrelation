@@ -89,9 +89,8 @@ class Morans(object):
         self.weights = pysal.threshold_binaryW_from_shapefile(
             self.shapefile, threshold, *args, **kwargs)
 
-        elapsed_time = time.process_time() - t
         logging.debug('{}: Weight calculation elapsed time {}'.format(
-            self.name, str(timedelta(seconds=elapsed_time))))
+            self.name, str(timedelta(seconds=time.process_time() - t))))
         return self.weights
 
     def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
@@ -175,7 +174,7 @@ class ShapeFilter(object):
 
     def _create_filtered_shapefile(self, value):
         input_layer = self.input_ds.GetLayer()
-        query_str = "'{}' = '{}'".format(self.field, value)
+        query_str = '"{}" = "{}"'.format(self.field, value)
         # Filter by our query
         input_layer.SetAttributeFilter(query_str)
         driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -191,7 +190,7 @@ class ShapeFilter(object):
         return out_shapefile
 
     def _get_unique_values(self):
-        sql = "SELECT DISTINCT '{}' FROM {}".format(
+        sql = 'SELECT DISTINCT "{}" FROM {}'.format(
             self.field, self.filename)
         layer = self.input_ds.ExecuteSQL(sql)
         values = []
@@ -230,6 +229,8 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, m
     if filter_column:
         logging.info('Running Shape Filter using: {}'.format(filter_column))
         shapefilter = ShapeFilter(source_shapefile, filter_column)
+        # TODO: this is slow if you have lots of files to create.
+        # I need to set a flag if the files are created already, and skip this
         files = shapefilter.create_all_shapefiles()
         logging.info('Created {} new shapefiles: {}'.format(len(files), files))
     else:
