@@ -64,6 +64,5 @@ if __name__ == '__main__':
     results_df = pd.concat(results_df, keys=keys, axis=0)
     results_df.to_csv('results.csv')
     results_df.to_html('results.html')
-    elapsed_time = time.process_time() - t
     logging.debug('Total elapsed time {}'.format(
-        str(timedelta(seconds=elapsed_time))))
+        str(timedelta(seconds=time.process_time() - t))))

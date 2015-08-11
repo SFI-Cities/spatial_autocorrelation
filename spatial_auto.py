@@ -100,6 +100,7 @@ class Morans(object):
             if not overwrite and col in self.results:
                 continue
             y = np.array(self.data.by_col(col))
+            y = y.astype(float) # TODO: is float always what we want? (morans breaks w/ string)
             mi = pysal.Moran(y, self.weights, *args, **kwargs)
             self.results[col] = mi
         return self.results
@@ -152,6 +153,9 @@ class ShapeFilter(object):
         self.out_dir = self._get_create_out_dir(out_dir)
 
     def _get_create_out_dir(self, out_dir):
+        """ Return path for out_dir
+            Creates directory if it doesn't exist
+        """
         path = os.path.dirname(self.shapefile)
         out_dir = os.path.join(path, out_dir)
         if not os.path.exists(out_dir):
@@ -159,6 +163,8 @@ class ShapeFilter(object):
         return out_dir
 
     def _get_filename(self):
+        """ Return filename for source shapefile
+        """
         return os.path.splitext(ntpath.basename(self.shapefile))[0]
 
     def _slugify(self, value):
@@ -168,19 +174,21 @@ class ShapeFilter(object):
         underscores) and converts spaces to hyphens. Also strips leading and
         trailing whitespace.
         """
-        value = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+        value = unicodedata.normalize('NFKD', value).encode(
+            'ascii', 'ignore').decode('ascii')
         value = re.sub('[^\w\s-]', '', value).strip().lower()
         return re.sub('[-\s]+', '-', value)
 
     def _create_filtered_shapefile(self, value):
+        """ Return new shapefile path/name.shp
+            Creates a shapefile from source, based on filtered value
+        """
         input_layer = self.input_ds.GetLayer()
         query_str = '"{}" = "{}"'.format(self.field, value)
         # Filter by our query
         input_layer.SetAttributeFilter(query_str)
         driver = ogr.GetDriverByName('ESRI Shapefile')
-        value = value.split('-')[0] # Hack for US Cities
-        value = self._slugify(value)
-        out_shapefile = "{}/{}.shp".format(self.out_dir, value)
+        out_shapefile = self._value_to_fname_path(value)
         # Remove output shapefile if it already exists
         if os.path.exists(out_shapefile):
             driver.DeleteDataSource(out_shapefile)
@@ -190,6 +198,8 @@ class ShapeFilter(object):
         return out_shapefile
 
     def _get_unique_values(self):
+        """ Return unique values of filter from source shapefile.
+        """
         sql = 'SELECT DISTINCT "{}" FROM {}'.format(
             self.field, self.filename)
         layer = self.input_ds.ExecuteSQL(sql)
@@ -198,11 +208,36 @@ class ShapeFilter(object):
             values.append(feature.GetField(0))
         return values
 
-    def create_all_shapefiles(self):
+    def _value_to_fname_path(self, value):
+        """ Return full filename path for shapefile from query value
+        """
+        value = value.split('-')[0]  # Hack to make US City names prettier
+        value = self._slugify(value)
+        fname = "{}.shp".format(value)
+        return os.path.join(self.out_dir, fname)
+
+    def _shapefile_exists(self, value):
+        """ Return boolean
+            Does shapefile exist (uses query value, not fname).
+        """
+        return os.path.isfile(self._value_to_fname_path(value))
+
+    def create_all_shapefiles(self, overwrite=False):
+        """ Returns list of new shapefiles
+            Creates shapefiles for filtered data from source shapefile.
+        """
         shapefiles = []
-        for val in self._get_unique_values():
-            out_file = self._create_filtered_shapefile(val)
-            shapefiles.append(out_file)
+        values = self._get_unique_values()
+        logging.info('Creating {} Shapefiles'.format(len(values)))
+        for val in values:
+            # TODO: make this multiprocess also, too slow for big filters
+            if overwrite and self._shapefile_exists(val):
+                out_file = self._create_filtered_shapefile(val)
+                logging.debug('Shapefile created: {}'.format(val))
+                shapefiles.append(out_file)
+            else:
+                logging.debug('Shapefile exists, skipped: {}'.format(val))
+                shapefiles.append(self._value_to_fname_path(val))
         return shapefiles
 
 
@@ -220,7 +255,8 @@ def run_single_morans(file, analysis_columns):
     return (filename, results)
 
 
-def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, mp=True):
+def run_moran_analysis(source_shapefile, analysis_columns,
+                       filter_column=None, mp=True):
     """
     1. Filter Shapefile by filter_column
     2. Run Moran's analysis for each shapefile, each analysis column
@@ -237,7 +273,7 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, m
         logging.info('No Shapefilter, Analyzing Source Shapefile')
         files = [source_shapefile]
     if mp:
-        results =  _moran_mp(files, analysis_columns)
+        results = _moran_mp(files, analysis_columns)
     else:
         results = []
         for file in files:
@@ -247,7 +283,12 @@ def run_moran_analysis(source_shapefile, analysis_columns, filter_column=None, m
 
 
 def _moran_mp(files, cols):
-    with Pool(processes=8) as pool:
+    """ Runs Morans code with multiprocessing module
+        processes number could be tuned to computer
+
+        Returns ALL the results at the end.
+    """
+    with Pool(processes=16) as pool:
         result = pool.map_async(
             partial(run_single_morans, analysis_columns=cols), files,)
         result.wait()
