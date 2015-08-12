@@ -103,6 +103,7 @@ class Morans(object):
             y = y.astype(float) # TODO: is float always what we want? (morans breaks w/ string)
             mi = pysal.Moran(y, self.weights, *args, **kwargs)
             self.results[col] = mi
+        logging.info('{}: Finished Moran Calculation'.format(self.name))
         return self.results
 
     def get_results(self, column, print_results=True):
@@ -231,7 +232,7 @@ class ShapeFilter(object):
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
             # TODO: make this multiprocess also, too slow for big filters
-            if overwrite and self._shapefile_exists(val):
+            if overwrite or not self._shapefile_exists(val):
                 out_file = self._create_filtered_shapefile(val)
                 logging.debug('Shapefile created: {}'.format(val))
                 shapefiles.append(out_file)
@@ -288,7 +289,7 @@ def _moran_mp(files, cols):
 
         Returns ALL the results at the end.
     """
-    with Pool(processes=16) as pool:
+    with Pool(processes=8) as pool:
         result = pool.map_async(
             partial(run_single_morans, analysis_columns=cols), files,)
         result.wait()

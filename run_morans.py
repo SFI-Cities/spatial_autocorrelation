@@ -31,16 +31,22 @@ parser.add_argument('-f', '--filter', type=str,
 parser.add_argument('--show-logs', dest='log', action='store_true')
 parser.add_argument('--no-logs', dest='log', action='store_false')
 parser.set_defaults(log=True)
+parser.add_argument('--logs-file', dest='log_file', action='store_true')
+parser.set_defaults(log_file=False)
 args = parser.parse_args()
 
 if __name__ == '__main__':
     t = time.process_time()
-    if args.log:
+    if args.log_file:
+        logging.basicConfig(format='%(asctime)s \n \t %(message)s',
+                            filename='morans.log',
+                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+    elif args.log:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
                             datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
     else:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
+                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.WARNING)
     if args.filter:
         filter_col = args.filter
     else:
