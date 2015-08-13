@@ -232,7 +232,7 @@ class ShapeFilter(object):
         values = self._get_unique_values()
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
-            if 'new-york' in val:
+            if 'new york' in val.lower():
                 #skip nyc for now =(
                 continue
             # TODO: make this multiprocess also, too slow for big filters
