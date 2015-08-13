@@ -84,7 +84,18 @@ class Morans(object):
         self._weights = value
         return self._weights
 
-    def calculate_weights(self, threshold=None, *args, **kwargs):
+    def calculate_weights(self, threshold=None, p=2, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        threshold  : float
+                     distance band
+        p          : float
+                     Minkowski p-norm distance metric parameter:
+                     1<=p<=infinity
+                     2: Euclidean distance
+                     1: Manhattan distance
+        """
         if threshold is None:
             if hasattr(self, 'threshold'):
                 threshold = self.threshold
@@ -94,8 +105,8 @@ class Morans(object):
         logging.info('{}: Starting weight calculation'.format(self.name))
         t = time.process_time()
 
-        self.weights = pysal.threshold_binaryW_from_array(
-            self.points_array, threshold, *args, **kwargs)
+        self.weights = pysal.DistanceBand(
+            self.points_array, threshold=threshold, p=p, *args, **kwargs)
 
         logging.debug('{}: Weight calculation elapsed time {}'.format(
             self.name, str(timedelta(seconds=time.process_time() - t))))
@@ -242,7 +253,7 @@ class ShapeFilter(object):
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
             if 'new york' in val.lower():
-                #skip nyc for now =(
+                # skip nyc for now =(
                 continue
             # TODO: make this multiprocess also, too slow for big filters
             if overwrite or not self._shapefile_exists(val):
