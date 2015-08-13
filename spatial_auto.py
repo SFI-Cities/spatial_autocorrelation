@@ -46,11 +46,15 @@ class Morans(object):
 
         if name:
             self.name = name
+        else:
+            self.name = os.path.splitext(ntpath.basename(self.filename))[0]
 
         self.results = {}
 
         # Calculate the faster properties on init
         self._threshold = pysal.min_threshold_dist_from_shapefile(
+            self.shapefile)
+        self._points_array = pysal.weights.util.get_points_array_from_shapefile(
             self.shapefile)
         self._data = pysal.open(self.dbf)
         self._columns = self._data.by_col
@@ -58,6 +62,10 @@ class Morans(object):
     @property
     def threshold(self):
         return self._threshold
+
+    @property
+    def points_array(self):
+        return self._points_array
 
     @property
     def data(self):
@@ -86,8 +94,8 @@ class Morans(object):
         logging.info('{}: Starting weight calculation'.format(self.name))
         t = time.process_time()
 
-        self.weights = pysal.threshold_binaryW_from_shapefile(
-            self.shapefile, threshold, *args, **kwargs)
+        self.weights = pysal.threshold_binaryW_from_array(
+            self.points_array, threshold, *args, **kwargs)
 
         logging.debug('{}: Weight calculation elapsed time {}'.format(
             self.name, str(timedelta(seconds=time.process_time() - t))))
@@ -95,6 +103,7 @@ class Morans(object):
 
     def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
         if not hasattr(self, 'weights'):
+            # TODO: add id variable here idVariable='ID'
             self.calculate_weights(threshold=self.threshold)
         for col in columns:
             if not overwrite and col in self.results:
