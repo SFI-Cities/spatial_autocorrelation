@@ -7,6 +7,7 @@
     :license: MIT
 """
 import logging
+import multiprocessing as mp
 import ntpath
 import os
 import pickle
@@ -16,7 +17,6 @@ import unicodedata
 
 from datetime import timedelta
 from functools import partial
-from multiprocessing import Pool
 
 from collections import OrderedDict
 
@@ -100,7 +100,8 @@ class Morans(object):
             if not overwrite and col in self.results:
                 continue
             y = np.array(self.data.by_col(col))
-            y = y.astype(float) # TODO: is float always what we want? (morans breaks w/ string)
+            # TODO: is float always what we want? (morans breaks w/ string)
+            y = y.astype(float)
             mi = pysal.Moran(y, self.weights, *args, **kwargs)
             self.results[col] = mi
         logging.info('{}: Finished Moran Calculation'.format(self.name))
@@ -245,7 +246,6 @@ class ShapeFilter(object):
 def run_single_morans(file, analysis_columns):
     named_path = os.path.splitext(file)[0]
     filename = os.path.splitext(os.path.basename(file))[0]
-
     logging.info('{}: Starting Analysis'.format(filename.upper()))
     moran = Morans(named_path, name=filename.upper())
     moran_results = moran.calculate_morans(analysis_columns)
@@ -266,8 +266,6 @@ def run_moran_analysis(source_shapefile, analysis_columns,
     if filter_column:
         logging.info('Running Shape Filter using: {}'.format(filter_column))
         shapefilter = ShapeFilter(source_shapefile, filter_column)
-        # TODO: this is slow if you have lots of files to create.
-        # I need to set a flag if the files are created already, and skip this
         files = shapefilter.create_all_shapefiles()
         logging.info('Created {} new shapefiles: {}'.format(len(files), files))
     else:
@@ -277,10 +275,35 @@ def run_moran_analysis(source_shapefile, analysis_columns,
         results = _moran_mp(files, analysis_columns)
     else:
         results = []
-        for file in files:
+        for i, file in enumerate(files):
             filename = os.path.splitext(os.path.basename(file))[0]
             results.append(run_single_morans(file, analysis_columns))
+            logging.debug('{} of {} done'.format(i, len(files)))
     return results
+
+
+class Worker(mp.Process):
+
+    def __init__(self, task_queue, done_q, counter, total):
+        super(Worker, self).__init__()
+        self.task_queue = task_queue
+        self.done_q = done_q
+        self.counter = counter
+        self.total = total
+
+    def run(self):
+        while True:
+            task = self.task_queue.get()
+            if task is None:
+                self.task_queue.task_done()
+                break
+            results = run_single_morans(*task)
+            self.task_queue.task_done()
+            self.done_q.put(results)
+            self.counter.value += 1
+            logging.debug(
+                '\n\t{} of {} Done\n'.format(self.counter.value, self.total))
+        return
 
 
 def _moran_mp(files, cols):
@@ -289,8 +312,26 @@ def _moran_mp(files, cols):
 
         Returns ALL the results at the end.
     """
-    with Pool(processes=8) as pool:
-        result = pool.map_async(
-            partial(run_single_morans, analysis_columns=cols), files,)
-        result.wait()
-    return result.get()
+    num_threads = 20
+
+    tasks = mp.JoinableQueue()
+    results_queue = mp.Queue()
+    count = mp.Value('i', 0)
+
+    # Start consumers
+    workers = [Worker(tasks, results_queue, count, len(files))
+               for i in range(num_threads)]
+    for w in workers:
+        w.start()
+
+    # Enqueue jobs
+    for i, f in enumerate(files):
+        tasks.put((f, cols))
+    # Add a stop marker for each worker
+    for i in range(num_threads):
+        tasks.put(None)
+    # Wait for all of the tasks to finish
+    tasks.join()
+
+    results = [results_queue.get() for f in files]
+    return results

@@ -39,22 +39,30 @@ if __name__ == '__main__':
     t = time.process_time()
     if args.log_file:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
-                            filename='morans.log',
-                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+                            filename='morans.log', level=logging.DEBUG,
+                            datefmt='%m/%d/%Y %I:%M:%S %p')
     elif args.log:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.DEBUG)
+                            level=logging.DEBUG,
+                            datefmt='%m/%d/%Y %I:%M:%S %p')
     else:
         logging.basicConfig(format='%(asctime)s \n \t %(message)s',
-                            datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.WARNING)
+                            level=logging.WARNING,
+                            datefmt='%m/%d/%Y %I:%M:%S %p')
     if args.filter:
         filter_col = args.filter
     else:
         filter_col = None
 
     logging.info('Starting Analysis')
-    results = run_moran_analysis(
-        args.shapefile, args.analysis_vars, filter_column=filter_col)
+    try:
+        results = run_moran_analysis(
+            args.shapefile, args.analysis_vars, filter_column=filter_col)
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except Exception as e:
+        logging.exception('\n\nError: ')
+
     logging.info('Finished Calculations \n\n')
     results_df = []
     keys = []
@@ -66,7 +74,7 @@ if __name__ == '__main__':
         results_log = '{} RESULTS \n'.format(shapefile.upper())
         results_log += df.to_string()
         results_log += '\n'
-        logging.info(results_log)
+        logging.debug(results_log)
     results_df = pd.concat(results_df, keys=keys, axis=0)
     results_df.to_csv('results.csv')
     results_df.to_html('results.html')
