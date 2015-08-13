@@ -46,11 +46,15 @@ class Morans(object):
 
         if name:
             self.name = name
+        else:
+            self.name = os.path.splitext(ntpath.basename(self.filename))[0]
 
         self.results = {}
 
         # Calculate the faster properties on init
         self._threshold = pysal.min_threshold_dist_from_shapefile(
+            self.shapefile)
+        self._points_array = pysal.weights.util.get_points_array_from_shapefile(
             self.shapefile)
         self._data = pysal.open(self.dbf)
         self._columns = self._data.by_col
@@ -58,6 +62,10 @@ class Morans(object):
     @property
     def threshold(self):
         return self._threshold
+
+    @property
+    def points_array(self):
+        return self._points_array
 
     @property
     def data(self):
@@ -76,7 +84,18 @@ class Morans(object):
         self._weights = value
         return self._weights
 
-    def calculate_weights(self, threshold=None, *args, **kwargs):
+    def calculate_weights(self, threshold=None, p=2, *args, **kwargs):
+        """
+        Parameters
+        ----------
+        threshold  : float
+                     distance band
+        p          : float
+                     Minkowski p-norm distance metric parameter:
+                     1<=p<=infinity
+                     2: Euclidean distance
+                     1: Manhattan distance
+        """
         if threshold is None:
             if hasattr(self, 'threshold'):
                 threshold = self.threshold
@@ -86,8 +105,8 @@ class Morans(object):
         logging.info('{}: Starting weight calculation'.format(self.name))
         t = time.process_time()
 
-        self.weights = pysal.threshold_binaryW_from_shapefile(
-            self.shapefile, threshold, *args, **kwargs)
+        self.weights = pysal.DistanceBand(
+            self.points_array, threshold=threshold, p=p, *args, **kwargs)
 
         logging.debug('{}: Weight calculation elapsed time {}'.format(
             self.name, str(timedelta(seconds=time.process_time() - t))))
@@ -95,6 +114,7 @@ class Morans(object):
 
     def calculate_morans(self, columns, overwrite=False, *args, **kwargs):
         if not hasattr(self, 'weights'):
+            # TODO: add id variable here idVariable='ID'
             self.calculate_weights(threshold=self.threshold)
         for col in columns:
             if not overwrite and col in self.results:
@@ -233,7 +253,7 @@ class ShapeFilter(object):
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
             if 'new york' in val.lower():
-                #skip nyc for now =(
+                # skip nyc for now =(
                 continue
             # TODO: make this multiprocess also, too slow for big filters
             if overwrite or not self._shapefile_exists(val):
