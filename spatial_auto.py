@@ -252,7 +252,6 @@ class ShapeFilter(object):
         values = self._get_unique_values()
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
-            print(val)
             if 'new-york' in val.lower().replace(' ','-'):
                 continue
             if 'los-angeles' in val.lower().replace(' ','-'):
