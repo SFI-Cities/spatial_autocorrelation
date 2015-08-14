@@ -254,7 +254,7 @@ class ShapeFilter(object):
         for val in values:
             if 'new-york' in val:
                 continue
-            if 'los-angeles'] in val:
+            if 'los-angeles' in val:
                 continue
             # TODO: make this multiprocess also, too slow for big filters
             if overwrite or not self._shapefile_exists(val):
