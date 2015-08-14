@@ -233,7 +233,6 @@ class ShapeFilter(object):
     def _value_to_fname_path(self, value):
         """ Return full filename path for shapefile from query value
         """
-        value = value.split('-')[0]  # Hack to make US City names prettier
         value = self._slugify(value)
         fname = "{}.shp".format(value)
         return os.path.join(self.out_dir, fname)
@@ -336,7 +335,7 @@ def _moran_mp(files, cols):
 
         Returns ALL the results at the end.
     """
-    num_threads = 20
+    num_threads = 16
 
     tasks = mp.JoinableQueue()
     results_queue = mp.Queue()

@@ -12,6 +12,7 @@
 """
 import argparse
 import logging
+import pickle
 import time
 
 from datetime import timedelta
@@ -64,19 +65,31 @@ if __name__ == '__main__':
         logging.exception('\n\nError: ')
 
     logging.info('Finished Calculations \n\n')
-    results_df = []
-    keys = []
-    for shapefile, values in results:
-        df = pd.DataFrame(values).transpose()
-        keys.append(shapefile)
-        results_df.append(df)
 
-        results_log = '{} RESULTS \n'.format(shapefile.upper())
-        results_log += df.to_string()
-        results_log += '\n'
-        logging.debug(results_log)
-    results_df = pd.concat(results_df, keys=keys, axis=0)
-    results_df.to_csv('results.csv')
-    results_df.to_html('results.html')
+    try:
+        results_df = []
+        keys = []
+        for shapefile, values in results:
+            df = pd.DataFrame(values).transpose()
+            if shapefile in keys:
+                val = 1
+                while True:
+                    shapefile = '{}_{}'.format(shapefile,val)
+                    if shapefile not in keys:
+                        break
+                    val += 1
+            keys.append(shapefile)
+            del(df['COLUMN']) # add this as a key later
+            results_df.append(df)
+
+            results_log = '{} RESULTS \n'.format(shapefile.upper())
+            results_log += df.to_string()
+            results_log += '\n'
+            logging.debug(results_log)
+        results_df = pd.concat(results_df, keys=keys, names=['CITY', 'COLUMN'], axis=0)
+        results_df.to_csv('results.csv')
+        pickle.dump(results, open( "results.p", "wb" ))
+    except:
+        logging.exception('Some error exporting results: ')
     logging.debug('Total elapsed time {}'.format(
         str(timedelta(seconds=time.process_time() - t))))
