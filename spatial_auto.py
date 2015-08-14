@@ -252,6 +252,8 @@ class ShapeFilter(object):
         values = self._get_unique_values()
         logging.info('Creating {} Shapefiles'.format(len(values)))
         for val in values:
+            if val in ['new-york', 'los-angeles']:
+                continue
             # TODO: make this multiprocess also, too slow for big filters
             if overwrite or not self._shapefile_exists(val):
                 out_file = self._create_filtered_shapefile(val)
