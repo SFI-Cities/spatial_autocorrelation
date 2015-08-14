@@ -59,6 +59,7 @@ if __name__ == '__main__':
     try:
         results = run_moran_analysis(
             args.shapefile, args.analysis_vars, filter_column=filter_col)
+        pickle.dump(results, open( "results.p", "wb" ))
     except (SystemExit, KeyboardInterrupt):
         raise
     except Exception as e:
@@ -88,7 +89,6 @@ if __name__ == '__main__':
             logging.debug(results_log)
         results_df = pd.concat(results_df, keys=keys, names=['CITY', 'COLUMN'], axis=0)
         results_df.to_csv('results.csv')
-        pickle.dump(results, open( "results.p", "wb" ))
     except:
         logging.exception('Some error exporting results: ')
     logging.debug('Total elapsed time {}'.format(
